@@ -1,16 +1,16 @@
-module.exports.start = function(SAT, d3, dungeon) {
+module.exports.start = function(SAT, d3) {
   var V = SAT.Vector;
   let objects = d3.quadtree();
 
   let size = {
-    x: dungeon[0].length,
-    y: dungeon.length
+    x: 500,
+    y: 500
   }
 
   for (var x = 0; x < size.x; x++) {
     for (var y = 0; y < size.y; y++) {
       let l = objects.length;
-      if (dungeon[x][y] === 1) {
+      if (Math.random() > 0.5) {
         objects.add([x, y, {tt: 1, c: new SAT.Box(new V(x * 40, y * 40), 40, 40).toPolygon() }]);
       }
 

@@ -5,21 +5,27 @@ var io = require('socket.io')(http);
 var cryptoRandomString = require('crypto-random-string');
 var btoa = require('btoa');
 var SAT = require('sat');
-var fastnoise = require('fastnoisejs');
-var sizeof = require('object-sizeof')
+var sizeof = require('object-sizeof');
 var LZUTF8 = require('lzutf8');
+var SimplexNoise = require('simplex-noise');
+var d3 = require("d3-quadtree");
+var Dungeon = require('random-dungeon-generator')
+var Fiber = require('fibers');
+
+var doptions = {
+  width: 500,
+  height: 500,
+  minRoomSize: 5,
+  maxRoomSize: 25
+};
+
+var dungeon = Dungeon.NewDungeon(doptions);
 
 var V = SAT.Vector;
 
-const noise = fastnoise.Create(Math.floor(Math.random() * 10))
-noise.SetNoiseType(fastnoise.Cellular)
-
-const lerp = (x, y, a) => x * (1 - a) + y * a;
-
 var players = [];
-var objects = require('./worlds/world1').start(SAT, noise);
-
-console.log(objects.length)
+var objects = require('./worlds/world1').start(SAT, d3, dungeon);
+// var objects = require('./worlds/world2').start(SAT, d3);
 
 var prevss = [];
 
@@ -32,6 +38,28 @@ app.get('/', (req, res) => {
 http.listen(3000, () => {
   console.log('listening on *:3000');
 });
+
+function findInCircle(quadtree, x, y, radius, filter) {
+  const result = [],
+    radius2 = radius * radius,
+    accept = filter
+      ? d => filter(d) && result.push(d)
+      : d => result.push(d);
+
+  quadtree.visit(function(node, x1, y1, x2, y2) {
+    if (node.length) {
+      return x1 >= x + radius || y1 >= y + radius || x2 < x - radius || y2 < y - radius;
+    }
+
+    const dx = +quadtree._x.call(null, node.data) - x,
+      dy = +quadtree._y.call(null, node.data) - y;
+    if (dx * dx + dy * dy < radius2) {
+      do { accept(node.data); } while (node = node.next);
+    }
+  });
+
+  return result;
+}
 
 setInterval(function() {
   for (let a = 0; a < players.length; a++) {
@@ -84,49 +112,84 @@ setInterval(function() {
         players[a].pos.x += players[a].pspeed;
       };
 
-      for (let o = 0; o < objects.length; o++) {
-        let response = new SAT.Response();
-        let collided = SAT.testCirclePolygon(players[a], objects[o], response);
-        if (collided) {
-          let overlapV = response.overlapV.clone().scale(-1);
-          players[a].pos.x += overlapV.x;
-          players[a].pos.y += overlapV.y;
-          if (objects[o].tt === 2) {
-            players[a].pos.x = 100;
-            players[a].pos.y = 100;
-          }
-        }
-      }
+      // for (let o = 0; o < objects.length; o++) {
+      //   let response = new SAT.Response();
+      //   let collided = SAT.testCirclePolygon(players[a], objects[o], response);
+      //   if (collided) {
+      //     let overlapV = response.overlapV.clone().scale(-1);
+      //     players[a].pos.x += overlapV.x;
+      //     players[a].pos.y += overlapV.y;
+      //     if (objects[o].tt === 2) {
+      //       players[a].pos.x = 0;
+      //       players[a].pos.y = 0;
+      //     }
+      //   }
+      // }
 
       let pss = [];
-      for (let b = 0; b < players.length; b++) {
-        if (players[b]) {
-          let ap = players[a].pos.x - players[b].pos.x;
-          let bp = players[a].pos.y - players[b].pos.y;
-          let c = Math.sqrt(ap * ap + bp * bp);
-          if (c < 700) {
-            pss[b] = { pos: players[b].pos, name: players[b].name };
-          }
-        }
-      }
-
       let oss = [];
-      if (!players[a].objloaded) {
-        for (let o = 0; o < objects.length; o++) {
-          let ap = players[a].pos.x - objects[o].pos.x;
-          let bp = players[a].pos.y - objects[o].pos.y;
+
+      players.filter((k, b) => {
+        if (players[b]) {
+          let ap = players[a].pos.x - k.pos.x;
+          let bp = players[a].pos.y - k.pos.y;
           let c = Math.sqrt(ap * ap + bp * bp);
           if (c < 700) {
-            oss[o] = { pos: objects[o].pos, tt: objects[o].tt };
+            pss[b] = { pos: k.pos, name: k.name };
           }
         }
-      }
+      })
+
+
+      // let oss = [];
+      // if (!players[a].objloaded) {
+      //   for (let o = 0; o < objects.length; o++) {
+      //     let ap = players[a].pos.x - objects[o].c.pos.x;
+      //     let bp = players[a].pos.y - objects[o].c.pos.y;
+      //     let c = Math.sqrt(ap * ap + bp * bp);
+      //     if (c < 900) {
+      //       oss[o] = { pos: objects[o].pos, tt: objects[o].tt };
+      //     }
+      //   }
+      // }
 
       if (!players[a].ocooldown) {
         players[a].ocooldown = 0;
       }
 
       players[a].ocooldown--;
+
+
+
+
+      // Fiber(function() {
+      let f = findInCircle(objects, players[a].pos.x / 40, players[a].pos.y / 40, 2);
+
+      let l = findInCircle(objects, players[a].pos.x / 40, players[a].pos.y / 40, 15);
+
+
+      if (l) {
+        l.filter(o => {
+          oss.push({ pos: o[2].c.pos, tt: o[2].tt });
+        })
+      }
+
+      if (f) {
+        f.forEach(e => {
+          let response = new SAT.Response();
+          let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
+          if (collided) {
+            let overlapV = response.overlapV.clone().scale(-1);
+            players[a].pos.x += overlapV.x;
+            players[a].pos.y += overlapV.y;
+            if (e[2].tt === 2) {
+              players[a].pos.x = 100;
+              players[a].pos.y = 100;
+            }
+          }
+        })
+      }
+      // }).run();
 
       let pp = new Promise((resolve, reject) => {
         LZUTF8.compressAsync(JSON.stringify(pss), { outputEncoding: "ByteArray" }, r => {
@@ -142,16 +205,11 @@ setInterval(function() {
         });
       });
 
-      if (players[a].ocooldown <= 0) {
-        Promise.all([pp, op]).then(([rpp, rop]) => {
+      Promise.all([pp, op]).then(([rpp, rop]) => {
+        if (players[a]) {
           io.to(players[a].sid).emit('t', rpp, rop);
-          players[a].ocooldown = 32;
-        });
-      } else {
-        pp.then(rpp => {
-          io.to(players[a].sid).emit('t', rpp);
-        });
-      }
+        }
+      });
 
     }
   }
@@ -162,7 +220,7 @@ io.on('connection', (socket) => {
 
   //spawn
   var id = players.length;
-  players.push(new SAT.Circle(new V(5 * 40, 5 * 40), 20));
+  players.push(new SAT.Circle(new V(100, 100), 20));
   socket.emit('id', id);
 
   players[id].sid = socket.id;
