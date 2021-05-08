@@ -29,8 +29,8 @@ var iterate = cave(grid, {
 iterate(5)
 
 var doptions = {
-  width: 1000,
-  height: 1000,
+  width: 500,
+  height: 500,
   minRoomSize: 5,
   maxRoomSize: 25
 };
@@ -113,20 +113,26 @@ setInterval(function() {
 
       players[a].dash.cooldown--;
 
+      let keyd = false;
+
       if (players[a].keyq.w === true) {
         players[a].pos.y -= players[a].pspeed;
+        keyd = true;
       };
 
       if (players[a].keyq.a === true) {
         players[a].pos.x -= players[a].pspeed;
+        keyd = true;
       };
 
       if (players[a].keyq.s === true) {
         players[a].pos.y += players[a].pspeed;
+        keyd = true;
       };
 
       if (players[a].keyq.d === true) {
         players[a].pos.x += players[a].pspeed;
+        keyd = true;
       };
 
       // for (let o = 0; o < objects.length; o++) {
@@ -170,20 +176,9 @@ setInterval(function() {
       //   }
       // }
 
-      if (!players[a].ocooldown) {
-        players[a].ocooldown = 0;
-      }
-
-      players[a].ocooldown--;
-
-
-
-
       // Fiber(function() {
-      let f = findInCircle(objects, players[a].pos.x / 40, players[a].pos.y / 40, 2);
 
-      let l = findInCircle(objects, players[a].pos.x / 40, players[a].pos.y / 40, 15);
-
+      let l = findInCircle(objects, players[a].pos.x / 40, players[a].pos.y / 40, 14);
 
       if (l) {
         l.filter(o => {
@@ -191,20 +186,23 @@ setInterval(function() {
         })
       }
 
-      if (f) {
-        f.forEach(e => {
-          let response = new SAT.Response();
-          let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
-          if (collided) {
-            let overlapV = response.overlapV.clone().scale(-1);
-            players[a].pos.x += overlapV.x;
-            players[a].pos.y += overlapV.y;
-            if (e[2].tt === 2) {
-              players[a].pos.x = 1000;
-              players[a].pos.y = 1000;
+
+      if (keyd === true) {
+        if (l) {
+          l.forEach(e => {
+            let response = new SAT.Response();
+            let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
+            if (collided) {
+              let overlapV = response.overlapV.clone().scale(-1);
+              players[a].pos.x += overlapV.x;
+              players[a].pos.y += overlapV.y;
+              if (e[2].tt === 2) {
+                players[a].pos.x = 1000;
+                players[a].pos.y = 1000;
+              }
             }
-          }
-        })
+          })
+        }
       }
       // }).run();
 

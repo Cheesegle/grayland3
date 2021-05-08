@@ -1,5 +1,4 @@
 module.exports.start = function(SAT, d3, a) {
-  console.log(a[0])
   var V = SAT.Vector;
   let objects = d3.quadtree();
 

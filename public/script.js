@@ -56,21 +56,16 @@ function draw() {
   // pop();
   for (let o = 0; o < olist.length; o++) {
     if (olist[o]) {
-      let ap = plist[id].pos.x - olist[o].pos.x;
-      let bp = plist[id].pos.y - olist[o].pos.y;
-      let c = Math.sqrt(ap * ap + bp * bp);
-      if (c < 700) {
-        push();
-        translate(olist[o].pos.x * (window.innerWidth / 1000), olist[o].pos.y * (window.innerWidth / 1000));
-        if (olist[o].tt === 1) {
-          image(temptile, -10 * (window.innerWidth / 500), -10 * (window.innerWidth / 500), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
-        }
-        if (olist[o].tt === 2) {
-          fill(color('red'));
-          rect(0, 0, 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
-        }
-        pop();
+      push();
+      translate(olist[o].pos.x * (window.innerWidth / 1000), olist[o].pos.y * (window.innerWidth / 1000));
+      if (olist[o].tt === 1) {
+        image(temptile, -10 * (window.innerWidth / 500), -10 * (window.innerWidth / 500), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
       }
+      if (olist[o].tt === 2) {
+        fill(color('red'));
+        rect(0, 0, 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+      }
+      pop();
     }
   }
 }
