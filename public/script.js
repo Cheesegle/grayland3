@@ -9,7 +9,8 @@ var latency;
 var lastt;
 var temptile;
 var border;
-
+var tcount = 0;
+var tps;
 
 var V = SAT.Vector;
 var clientp = new SAT.Circle(new V(100, 100), 20);
@@ -82,6 +83,9 @@ function draw() {
                 if (breakp === 0) {
                   socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
                 }
+                if (breakp === 1) {
+                  socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
+                }
                 fill('rgba(255, 0, 0, ' + ((breakp / 2) + 0.25) + ')');
               } else {
                 if (breakp !== 0) {
@@ -108,6 +112,7 @@ function draw() {
   text('x: ' + Math.round(plist[id].pos.x / 40), 10, 30);
   text('y: ' + Math.round(plist[id].pos.y / 40), 10, 60);
   text('Latency: ' + latency + 'ms', 10, 90);
+  text('TPS: ' + tps, 10, 120);
 }
 
 var pspeed = 2.5;
@@ -164,6 +169,7 @@ function windowResized() {
 }
 
 socket.on('t', (pnow, onow) => {
+  tcount++;
   lastt = performance.now();
   plast = plist;
   plist = JSON.parse(LZUTF8.decompress(new Uint8Array(pnow)));
@@ -185,6 +191,8 @@ var startTime;
 setInterval(function() {
   startTime = Date.now();
   socket.emit('ping');
+  tps = tcount;
+  tcount = 0;
 }, 1000);
 
 socket.on('pong', function() {

@@ -7,14 +7,20 @@ var btoa = require('btoa');
 var SAT = require('sat');
 var sizeof = require('object-sizeof');
 var LZUTF8 = require('lzutf8');
-var d3 = require("d3-quadtree");
+var RBush = require('rbush');
+var knn = require('rbush-knn');
 var Dungeon = require('random-dungeon-generator');
 var zeros = require("zeros");
-
 var cave = require('cave-automata-2d')
   , ndarray = require('ndarray')
-  , width = 500
-  , height = 500
+  , width = 1000
+  , height = 1000
+
+class MyRBush extends RBush {
+  toBBox([x, y]) { return { minX: x, minY: y, maxX: x, maxY: y }; }
+  compareMinX(a, b) { return a.x - b.x; }
+  compareMinY(a, b) { return a.y - b.y; }
+}
 
 var grid = ndarray = zeros([width, height])
 
@@ -39,7 +45,7 @@ var dungeon = Dungeon.NewDungeon(doptions);
 var V = SAT.Vector;
 
 var players = [];
-var objects = require('./worlds/world2').start(SAT, d3, grid);
+var objects = require('./worlds/world2').start(SAT, MyRBush, grid);
 // var objects = require('./worlds/world2').start(SAT, d3);
 
 var prevss = [];
@@ -54,27 +60,27 @@ http.listen(3000, () => {
   console.log('listening on *:3000');
 });
 
-function findInCircle(quadtree, x, y, radius, filter) {
-  const result = [],
-    radius2 = radius * radius,
-    accept = filter
-      ? d => filter(d) && result.push(d)
-      : d => result.push(d);
+// function findInCircle(quadtree, x, y, radius, filter) {
+//   const result = [],
+//     radius2 = radius * radius,
+//     accept = filter
+//       ? d => filter(d) && result.push(d)
+//       : d => result.push(d);
 
-  quadtree.visit(function(node, x1, y1, x2, y2) {
-    if (node.length) {
-      return x1 >= x + radius || y1 >= y + radius || x2 < x - radius || y2 < y - radius;
-    }
+//   quadtree.visit(function(node, x1, y1, x2, y2) {
+//     if (node.length) {
+//       return x1 >= x + radius || y1 >= y + radius || x2 < x - radius || y2 < y - radius;
+//     }
 
-    const dx = +quadtree._x.call(null, node.data) - x,
-      dy = +quadtree._y.call(null, node.data) - y;
-    if (dx * dx + dy * dy < radius2) {
-      do { accept(node.data); } while (node = node.next);
-    }
-  });
+//     const dx = +quadtree._x.call(null, node.data) - x,
+//       dy = +quadtree._y.call(null, node.data) - y;
+//     if (dx * dx + dy * dy < radius2) {
+//       do { accept(node.data); } while (node = node.next);
+//     }
+//   });
 
-  return result;
-}
+//   return result;
+// }
 
 setInterval(function() {
   for (let a = 0; a < players.length; a++) {
@@ -169,23 +175,40 @@ setInterval(function() {
       //   }
       // }
 
-      let l = findInCircle(objects, players[a].pos.x / 40, players[a].pos.y / 40, 14);
+      // let l = objects.search({
+      //   minX: (players[a].pos.x / 40) - 13,
+      //   minY: (players[a].pos.y / 40) - 8,
+      //   maxX: (players[a].pos.x / 40) + 13,
+      //   maxY: (players[a].pos.y / 40) + 8
+      // });
+
+      var l = knn(objects, players[a].pos.x / 40, players[a].pos.y / 40, 400);
 
       if (l) {
         l.filter(o => {
-          oss.push({ pos: o[2].c.pos, tt: o[2].tt });
+          let ap = (players[a].pos.x / 40) - o[0];
+          let bp = (players[a].pos.y / 40) - o[1];
+          let c = Math.sqrt(ap * ap + bp * bp);
+          if (c < 14) {
+            oss.push({ pos: o[2].c.pos, tt: o[2].tt });
+          }
         })
       }
 
 
       if (l) {
         l.forEach(e => {
-          let response = new SAT.Response();
-          let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
-          if (collided) {
-            let overlapV = response.overlapV.clone().scale(-1);
-            players[a].pos.x += overlapV.x;
-            players[a].pos.y += overlapV.y;
+          let ap = (players[a].pos.x / 40) - e[0];
+          let bp = (players[a].pos.y / 40) - e[1];
+          let c = Math.sqrt(ap * ap + bp * bp);
+          if (c < 2) {
+            let response = new SAT.Response();
+            let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
+            if (collided) {
+              let overlapV = response.overlapV.clone().scale(-1);
+              players[a].pos.x += overlapV.x;
+              players[a].pos.y += overlapV.y;
+            }
           }
         })
       }
@@ -223,8 +246,8 @@ io.on('connection', (socket) => {
 
   //spawn
   var id = players.length;
-  players.push(new SAT.Circle(new V((200 * 40) + (Math.random() * (100 * 40)), (200 * 40) + (Math.random() * (100 * 40))), 20));
-  // players.push(new SAT.Circle(new V(500 * 40, 500 * 40), 20));
+  players.push(new SAT.Circle(new V((400 * 40) + (Math.random() * (200 * 40)), (400 * 40) + (Math.random() * (200 * 40))), 20));
+  // players.push(new SAT.Circle(new V(1000 * 40, 1000 * 40), 20));
 
   socket.emit('id', id);
 
@@ -263,43 +286,28 @@ io.on('connection', (socket) => {
     players[id].keyq.space = state;
   });
 
-  let breakd = 61;
-
-  let breakx;
-  let breaky;
+  let breakd;
 
   setInterval(function() {
     if (breakd < 60) {
       breakd++;
       socket.emit('b', breakd / 60);
     }
-    if (breakd === 60) {
-      socket.emit('b', 0);
-      breakd = 61;
-      let ap = players[id].pos.x - breakx * 40;
-      let bp = players[id].pos.y - breaky * 40;
-      let c = Math.sqrt(ap * ap + bp * bp);
-      if (c < 150) {
-        if (objects.find(breakx, breaky, 1)) {
-          if (objects.find(breakx, breaky, 1)[2].tt === 1) {
-            objects.remove(objects.find(breakx, breaky, 1));
-          }
-        }
-      }
-    }
   }, 1000 / 60);
 
-
   socket.on('break', (x, y) => {
-    if (breakd === 61) {
-      if (objects.find(x, y, 1)) {
-        if (objects.find(x, y, 1)[2].tt === 1) {
-          breakd = 0;
-          breakx = x;
-          breaky = y;
+    if (breakd === 60) {
+      let ap = players[id].pos.x - x * 40;
+      let bp = players[id].pos.y - y * 40;
+      let c = Math.sqrt(ap * ap + bp * bp);
+      if (c < 150) {
+        let l = knn(objects, x, y, 1);
+        if (l) {
+          objects.remove(l[0])
         }
       }
     }
+    breakd = 0;
   });
 
   socket.on('breakc', () => {
