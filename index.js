@@ -13,8 +13,8 @@ var Dungeon = require('random-dungeon-generator');
 var zeros = require("zeros");
 var cave = require('cave-automata-2d')
   , ndarray = require('ndarray')
-  , width = 1000
-  , height = 1000
+  , width = 1500
+  , height = 1500
 
 class MyRBush extends RBush {
   toBBox([x, y]) { return { minX: x, minY: y, maxX: x, maxY: y }; }
@@ -43,6 +43,8 @@ var doptions = {
 var dungeon = Dungeon.NewDungeon(doptions);
 
 var V = SAT.Vector;
+
+console.log('Starting...')
 
 var players = [];
 var objects = require('./worlds/world2').start(SAT, MyRBush, grid);
@@ -246,7 +248,7 @@ io.on('connection', (socket) => {
 
   //spawn
   var id = players.length;
-  players.push(new SAT.Circle(new V((400 * 40) + (Math.random() * (200 * 40)), (400 * 40) + (Math.random() * (200 * 40))), 20));
+  players.push(new SAT.Circle(new V((650 * 40) + (Math.random() * (200 * 40)), (650 * 40) + (Math.random() * (200 * 40))), 20));
   // players.push(new SAT.Circle(new V(1000 * 40, 1000 * 40), 20));
 
   socket.emit('id', id);

@@ -5,8 +5,8 @@ module.exports.start = function(SAT, MyRBush, a) {
   let objects =  new MyRBush();
 
   let size = {
-    x: 1000,
-    y: 1000
+    x: 1500,
+    y: 1500
   }
 
   for (var x = 0; x < size.x; x++) {

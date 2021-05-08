@@ -12,6 +12,17 @@ var border;
 var tcount = 0;
 var tps;
 
+function zeros(dimensions) {
+  var array = [];
+  for (var i = 0; i < dimensions[0]; ++i) {
+    array.push(dimensions.length == 1 ? 0 : zeros(dimensions.slice(1)));
+  }
+  return array;
+}
+
+var tmap = zeros([10, 10]);
+
+
 var V = SAT.Vector;
 var clientp = new SAT.Circle(new V(100, 100), 20);
 
@@ -20,6 +31,8 @@ var name = prompt("Username:", "");
 if (name != null) {
   socket.emit('name', name)
 }
+
+document.addEventListener('contextmenu', event => event.preventDefault());
 
 function preload() {
   temptile = loadImage('assets/temptile.png');
