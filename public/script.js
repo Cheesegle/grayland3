@@ -1,15 +1,15 @@
 var socket = io();
 
 var id;
-
 var plist = [];
 var olist = [];
-
 var plast = [];
-
+var breakp = 0;
+var latency;
 var lastt;
-
 var temptile;
+var border;
+
 
 var V = SAT.Vector;
 var clientp = new SAT.Circle(new V(100, 100), 20);
@@ -22,6 +22,7 @@ if (name != null) {
 
 function preload() {
   temptile = loadImage('assets/temptile.png');
+  border = loadImage('assets/border.jpg');
 }
 
 function setup() {
@@ -33,10 +34,11 @@ function setup() {
 function draw() {
   clear();
   background(120);
+  push();
   translate(windowWidth / 2, windowHeight / 2);
   let lasttd = (performance.now() - lastt) / (1000 / 20);
   if (plist[id] && plast[id]) {
-    drawingContext.translate(-lerp(plast[id].pos.x, plist[id].pos.x, lasttd) * (window.innerWidth / 1000), -lerp(plast[id].pos.y, plist[id].pos.y, lasttd) * (window.innerWidth / 1000))
+    translate(-lerp(plast[id].pos.x, plist[id].pos.x, lasttd) * (window.innerWidth / 1000), -lerp(plast[id].pos.y, plist[id].pos.y, lasttd) * (window.innerWidth / 1000))
   }
   for (let i = 0; i < plist.length; i++) {
     if (plist[i] && plast[i]) {
@@ -62,12 +64,50 @@ function draw() {
         image(temptile, -10 * (window.innerWidth / 500), -10 * (window.innerWidth / 500), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
       }
       if (olist[o].tt === 2) {
-        fill(color('red'));
-        rect(0, 0, 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+        image(border, -10 * (window.innerWidth / 500), -10 * (window.innerWidth / 500), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+      }
+
+      let mx = ((olist[o].pos.x * (window.innerWidth / 1000)) - ((plist[id].pos.x * (window.innerWidth / 1000))) + (windowWidth / 2));
+
+      let my = ((olist[o].pos.y * (window.innerWidth / 1000)) - ((plist[id].pos.y * (window.innerWidth / 1000))) + (windowHeight / 2));
+
+      if (mouseX > mx - (10 * (window.innerWidth / 500)) && mouseX < mx + (10 * (window.innerWidth / 500))) {
+        if (mouseY > my - (10 * (window.innerWidth / 500)) && mouseY < my + (10 * (window.innerWidth / 500))) {
+          let ap = plist[id].pos.x - olist[o].pos.x;
+          let bp = plist[id].pos.y - olist[o].pos.y;
+          let c = Math.sqrt(ap * ap + bp * bp);
+          if (c < 150) {
+            if (mouseIsPressed) {
+              if (mouseButton === LEFT) {
+                if (breakp === 0) {
+                  socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
+                }
+                fill('rgba(255, 0, 0, ' + ((breakp / 2) + 0.25) + ')');
+              } else {
+                if (breakp !== 0) {
+                  socket.emit('breakc');
+                }
+                fill('rgba(255, 0, 0, 0.25)');
+              }
+            } else {
+              if (breakp !== 0) {
+                socket.emit('breakc');
+              }
+              fill('rgba(255, 0, 0, 0.25)');
+            }
+            noStroke();
+            rect(0, 0, 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+          }
+        }
       }
       pop();
     }
   }
+  pop();
+  textSize(32);
+  text('x: ' + Math.round(plist[id].pos.x / 40), 10, 30);
+  text('y: ' + Math.round(plist[id].pos.y / 40), 10, 60);
+  text('Latency: ' + latency + 'ms', 10, 90);
 }
 
 var pspeed = 2.5;
@@ -134,4 +174,20 @@ socket.on('t', (pnow, onow) => {
 
 socket.on('id', (sid) => {
   id = sid;
+});
+
+socket.on('b', (b) => {
+  breakp = b;
+});
+
+var startTime;
+
+setInterval(function() {
+  startTime = Date.now();
+  socket.emit('ping');
+}, 1000);
+
+socket.on('pong', function() {
+  latency = Date.now() - startTime;
+  console.log(latency);
 });

@@ -8,8 +8,7 @@ var SAT = require('sat');
 var sizeof = require('object-sizeof');
 var LZUTF8 = require('lzutf8');
 var d3 = require("d3-quadtree");
-var Dungeon = require('random-dungeon-generator')
-var Fiber = require('fibers');
+var Dungeon = require('random-dungeon-generator');
 var zeros = require("zeros");
 
 var cave = require('cave-automata-2d')
@@ -26,7 +25,7 @@ var iterate = cave(grid, {
   , fill: true
 })
 
-iterate(5)
+iterate(5);
 
 var doptions = {
   width: 500,
@@ -113,26 +112,20 @@ setInterval(function() {
 
       players[a].dash.cooldown--;
 
-      let keyd = false;
-
       if (players[a].keyq.w === true) {
         players[a].pos.y -= players[a].pspeed;
-        keyd = true;
       };
 
       if (players[a].keyq.a === true) {
         players[a].pos.x -= players[a].pspeed;
-        keyd = true;
       };
 
       if (players[a].keyq.s === true) {
         players[a].pos.y += players[a].pspeed;
-        keyd = true;
       };
 
       if (players[a].keyq.d === true) {
         players[a].pos.x += players[a].pspeed;
-        keyd = true;
       };
 
       // for (let o = 0; o < objects.length; o++) {
@@ -176,8 +169,6 @@ setInterval(function() {
       //   }
       // }
 
-      // Fiber(function() {
-
       let l = findInCircle(objects, players[a].pos.x / 40, players[a].pos.y / 40, 14);
 
       if (l) {
@@ -187,24 +178,17 @@ setInterval(function() {
       }
 
 
-      if (keyd === true) {
-        if (l) {
-          l.forEach(e => {
-            let response = new SAT.Response();
-            let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
-            if (collided) {
-              let overlapV = response.overlapV.clone().scale(-1);
-              players[a].pos.x += overlapV.x;
-              players[a].pos.y += overlapV.y;
-              if (e[2].tt === 2) {
-                players[a].pos.x = 1000;
-                players[a].pos.y = 1000;
-              }
-            }
-          })
-        }
+      if (l) {
+        l.forEach(e => {
+          let response = new SAT.Response();
+          let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
+          if (collided) {
+            let overlapV = response.overlapV.clone().scale(-1);
+            players[a].pos.x += overlapV.x;
+            players[a].pos.y += overlapV.y;
+          }
+        })
       }
-      // }).run();
 
       let pp = new Promise((resolve, reject) => {
         LZUTF8.compressAsync(JSON.stringify(pss), { outputEncoding: "ByteArray" }, r => {
@@ -233,9 +217,15 @@ setInterval(function() {
 io.on('connection', (socket) => {
   console.log('a user connected');
 
+  socket.on('ping', function() {
+    socket.emit('pong');
+  });
+
   //spawn
   var id = players.length;
-  players.push(new SAT.Circle(new V(1000, 1000), 20));
+  players.push(new SAT.Circle(new V((200 * 40) + (Math.random() * (100 * 40)), (200 * 40) + (Math.random() * (100 * 40))), 20));
+  // players.push(new SAT.Circle(new V(500 * 40, 500 * 40), 20));
+
   socket.emit('id', id);
 
   players[id].sid = socket.id;
@@ -271,5 +261,49 @@ io.on('connection', (socket) => {
 
   socket.on('space', (state) => {
     players[id].keyq.space = state;
+  });
+
+  let breakd = 61;
+
+  let breakx;
+  let breaky;
+
+  setInterval(function() {
+    if (breakd < 60) {
+      breakd++;
+      socket.emit('b', breakd / 60);
+    }
+    if (breakd === 60) {
+      socket.emit('b', 0);
+      breakd = 61;
+      let ap = players[id].pos.x - breakx * 40;
+      let bp = players[id].pos.y - breaky * 40;
+      let c = Math.sqrt(ap * ap + bp * bp);
+      if (c < 150) {
+        if (objects.find(breakx, breaky, 1)) {
+          if (objects.find(breakx, breaky, 1)[2].tt === 1) {
+            objects.remove(objects.find(breakx, breaky, 1));
+          }
+        }
+      }
+    }
+  }, 1000 / 60);
+
+
+  socket.on('break', (x, y) => {
+    if (breakd === 61) {
+      if (objects.find(x, y, 1)) {
+        if (objects.find(x, y, 1)[2].tt === 1) {
+          breakd = 0;
+          breakx = x;
+          breaky = y;
+        }
+      }
+    }
+  });
+
+  socket.on('breakc', () => {
+    socket.emit('b', 0);
+    breakd = 61;
   });
 });
