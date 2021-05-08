@@ -7,14 +7,30 @@ var btoa = require('btoa');
 var SAT = require('sat');
 var sizeof = require('object-sizeof');
 var LZUTF8 = require('lzutf8');
-var SimplexNoise = require('simplex-noise');
 var d3 = require("d3-quadtree");
 var Dungeon = require('random-dungeon-generator')
 var Fiber = require('fibers');
+var zeros = require("zeros");
+
+var cave = require('cave-automata-2d')
+  , ndarray = require('ndarray')
+  , width = 500
+  , height = 500
+
+var grid = ndarray = zeros([width, height])
+
+var iterate = cave(grid, {
+  density: 0.5
+  , threshold: 5
+  , hood: 1
+  , fill: true
+})
+
+iterate(5)
 
 var doptions = {
-  width: 500,
-  height: 500,
+  width: 1000,
+  height: 1000,
   minRoomSize: 5,
   maxRoomSize: 25
 };
@@ -24,7 +40,7 @@ var dungeon = Dungeon.NewDungeon(doptions);
 var V = SAT.Vector;
 
 var players = [];
-var objects = require('./worlds/world1').start(SAT, d3, dungeon);
+var objects = require('./worlds/world2').start(SAT, d3, grid);
 // var objects = require('./worlds/world2').start(SAT, d3);
 
 var prevss = [];
@@ -69,7 +85,7 @@ setInterval(function() {
       // prevss[a].y = players[a].pos.y;
 
       if (!players[a].pspeed) {
-        players[a].pspeed = 2.5;
+        players[a].pspeed = 8;
       }
 
       if (!players[a].dash) {
@@ -81,17 +97,18 @@ setInterval(function() {
 
       if (players[a].keyq.space === true) {
         if (players[a].dash.cooldown <= 0) {
-          players[a].dash.cooldown = 96;
-          players[a].dash.duration = 16;
+          players[a].dash.cooldown = 60;
+          players[a].dash.duration = 10;
         }
       };
 
       if (players[a].dash.duration >= 0) {
         players[a].dash.duration--;
-        players[a].pspeed += 1;
-        if (players[a].dash.duration === 0) {
-          players[a].pspeed = 2.5;
-        }
+        players[a].pspeed = 19;
+      }
+
+      if (players[a].dash.duration <= 0) {
+        players[a].pspeed = 8;
       }
 
       players[a].dash.cooldown--;
@@ -183,8 +200,8 @@ setInterval(function() {
             players[a].pos.x += overlapV.x;
             players[a].pos.y += overlapV.y;
             if (e[2].tt === 2) {
-              players[a].pos.x = 100;
-              players[a].pos.y = 100;
+              players[a].pos.x = 1000;
+              players[a].pos.y = 1000;
             }
           }
         })
@@ -213,14 +230,14 @@ setInterval(function() {
 
     }
   }
-}, 1000 / 64);
+}, 1000 / 20);
 
 io.on('connection', (socket) => {
   console.log('a user connected');
 
   //spawn
   var id = players.length;
-  players.push(new SAT.Circle(new V(100, 100), 20));
+  players.push(new SAT.Circle(new V(1000, 1000), 20));
   socket.emit('id', id);
 
   players[id].sid = socket.id;

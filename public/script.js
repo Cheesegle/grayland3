@@ -34,7 +34,7 @@ function draw() {
   clear();
   background(120);
   translate(windowWidth / 2, windowHeight / 2);
-  let lasttd = (performance.now() - lastt) / (1000 / 64);
+  let lasttd = (performance.now() - lastt) / (1000 / 20);
   if (plist[id] && plast[id]) {
     drawingContext.translate(-lerp(plast[id].pos.x, plist[id].pos.x, lasttd) * (window.innerWidth / 1000), -lerp(plast[id].pos.y, plist[id].pos.y, lasttd) * (window.innerWidth / 1000))
   }
