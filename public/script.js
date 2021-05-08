@@ -12,16 +12,9 @@ var border;
 var tcount = 0;
 var tps;
 
-function zeros(dimensions) {
-  var array = [];
-  for (var i = 0; i < dimensions[0]; ++i) {
-    array.push(dimensions.length == 1 ? 0 : zeros(dimensions.slice(1)));
-  }
-  return array;
+function round40(x) {
+  return Math.round(x / 40) * 40;
 }
-
-var tmap = zeros([10, 10]);
-
 
 var V = SAT.Vector;
 var clientp = new SAT.Circle(new V(100, 100), 20);
@@ -70,6 +63,7 @@ function draw() {
   // fill(color('purple'));
   // circle(0, 0, 20 * (window.innerWidth / 500));
   // pop();
+
   for (let o = 0; o < olist.length; o++) {
     if (olist[o]) {
       push();
@@ -85,36 +79,34 @@ function draw() {
 
       let my = ((olist[o].pos.y * (window.innerWidth / 1000)) - ((plist[id].pos.y * (window.innerWidth / 1000))) + (windowHeight / 2));
 
-      if (mouseX > mx - (10 * (window.innerWidth / 500)) && mouseX < mx + (10 * (window.innerWidth / 500))) {
-        if (mouseY > my - (10 * (window.innerWidth / 500)) && mouseY < my + (10 * (window.innerWidth / 500))) {
-          let ap = plist[id].pos.x - olist[o].pos.x;
-          let bp = plist[id].pos.y - olist[o].pos.y;
-          let c = Math.sqrt(ap * ap + bp * bp);
-          if (c < 150) {
-            if (mouseIsPressed) {
-              if (mouseButton === LEFT) {
-                if (breakp === 0) {
-                  socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
-                }
-                if (breakp === 1) {
-                  socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
-                }
-                fill('rgba(255, 0, 0, ' + ((breakp / 2) + 0.25) + ')');
-              } else {
-                if (breakp !== 0) {
-                  socket.emit('breakc');
-                }
-                fill('rgba(255, 0, 0, 0.25)');
+      if (mouseX > mx - (10 * (window.innerWidth / 500)) && mouseX < mx + (10 * (window.innerWidth / 500)) && mouseY > my - (10 * (window.innerWidth / 500)) && mouseY < my + (10 * (window.innerWidth / 500))) {
+        let ap = plist[id].pos.x - olist[o].pos.x;
+        let bp = plist[id].pos.y - olist[o].pos.y;
+        let c = Math.sqrt(ap * ap + bp * bp);
+        if (c < 150) {
+          if (mouseIsPressed) {
+            if (mouseButton === LEFT) {
+              if (breakp === 0) {
+                socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
               }
+              if (breakp === 1) {
+                socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
+              }
+              fill('rgba(255, 0, 0, ' + ((breakp / 2) + 0.25) + ')');
             } else {
               if (breakp !== 0) {
                 socket.emit('breakc');
               }
               fill('rgba(255, 0, 0, 0.25)');
             }
-            noStroke();
-            rect(0, 0, 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+          } else {
+            if (breakp !== 0) {
+              socket.emit('breakc');
+            }
+            fill('rgba(255, 0, 0, 0.25)');
           }
+          noStroke();
+          rect(0, 0, 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
         }
       }
       pop();
@@ -126,6 +118,7 @@ function draw() {
   text('y: ' + Math.round(plist[id].pos.y / 40), 10, 60);
   text('Latency: ' + latency + 'ms', 10, 90);
   text('TPS: ' + tps, 10, 120);
+  rect(round40(mouseX), round40(mouseY), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500))
 }
 
 var pspeed = 2.5;
