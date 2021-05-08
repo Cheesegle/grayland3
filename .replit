@@ -1,2 +1,2 @@
 language = "nodejs"
-run = "node --max-old-space-size=2048 index.js"
+run = "node --max-old-space-size=4096 index.js"

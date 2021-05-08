@@ -11,13 +11,12 @@ var temptile;
 var border;
 var tcount = 0;
 var tps;
+var u = (window.innerWidth / 1000);
+var u2 = (window.innerWidth / 500);
 
 function round40(x) {
-  return Math.round(x / 40) * 40;
+  return Math.floor(x / 40) * 40;
 }
-
-var V = SAT.Vector;
-var clientp = new SAT.Circle(new V(100, 100), 20);
 
 var name = prompt("Username:", "");
 
@@ -45,41 +44,48 @@ function draw() {
   translate(windowWidth / 2, windowHeight / 2);
   let lasttd = (performance.now() - lastt) / (1000 / 20);
   if (plist[id] && plast[id]) {
-    translate(-lerp(plast[id].pos.x, plist[id].pos.x, lasttd) * (window.innerWidth / 1000), -lerp(plast[id].pos.y, plist[id].pos.y, lasttd) * (window.innerWidth / 1000))
+    translate(-lerp(plast[id].pos.x, plist[id].pos.x, lasttd) * u, -lerp(plast[id].pos.y, plist[id].pos.y, lasttd) * u)
   }
   for (let i = 0; i < plist.length; i++) {
     if (plist[i] && plast[i]) {
       push();
-      translate((lerp(plast[i].pos.x, plist[i].pos.x, lasttd) - 20) * (window.innerWidth / 1000), (lerp(plast[i].pos.y, plist[i].pos.y, lasttd) - 20) * (window.innerWidth / 1000));
-      circle(0, 0, 20 * (window.innerWidth / 500));
-      textSize(16 * (window.innerWidth / 1000));
+      translate((lerp(plast[i].pos.x, plist[i].pos.x, lasttd) - 20) * u, (lerp(plast[i].pos.y, plist[i].pos.y, lasttd) - 20) * u);
+      circle(0, 0, 20 * u2);
+      textSize(16 * u);
       textAlign(CENTER);
-      text(plist[i].name, 0, -20 * (window.innerWidth / 1000));
+      text(plist[i].name, 0, -20 * u);
       pop();
     }
   }
   // push();
-  // translate((clientp.pos.x - 20) * (window.innerWidth / 1000), (clientp.pos.y - 20) * (window.innerWidth / 1000));
+  // translate((clientp.pos.x - 20) * u, (clientp.pos.y - 20) * u);
   // fill(color('purple'));
-  // circle(0, 0, 20 * (window.innerWidth / 500));
+  // circle(0, 0, 20 * u2);
+  // pop();
+
+
+  // push();
+  // translate(-windowWidth / 2, -windowHeight / 2);
+  // translate(plist[id].pos.x * u, plist[id].pos.y * u);
+  // rect(round40(mouseX) * u2, mouseY, 20 * u2, 20 * u2);
   // pop();
 
   for (let o = 0; o < olist.length; o++) {
     if (olist[o]) {
       push();
-      translate(olist[o].pos.x * (window.innerWidth / 1000), olist[o].pos.y * (window.innerWidth / 1000));
+      translate(olist[o].pos.x * u, olist[o].pos.y * u);
       if (olist[o].tt === 1) {
-        image(temptile, -10 * (window.innerWidth / 500), -10 * (window.innerWidth / 500), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+        image(temptile, -10 * u2, -10 * u2, 20 * u2, 20 * u2);
       }
       if (olist[o].tt === 2) {
-        image(border, -10 * (window.innerWidth / 500), -10 * (window.innerWidth / 500), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+        image(border, -10 * u2, -10 * u2, 20 * u2, 20 * u2);
       }
 
-      let mx = ((olist[o].pos.x * (window.innerWidth / 1000)) - ((plist[id].pos.x * (window.innerWidth / 1000))) + (windowWidth / 2));
+      let mx = ((olist[o].pos.x * u) - ((plist[id].pos.x * u)) + (windowWidth / 2));
 
-      let my = ((olist[o].pos.y * (window.innerWidth / 1000)) - ((plist[id].pos.y * (window.innerWidth / 1000))) + (windowHeight / 2));
+      let my = ((olist[o].pos.y * u) - ((plist[id].pos.y * u)) + (windowHeight / 2));
 
-      if (mouseX > mx - (10 * (window.innerWidth / 500)) && mouseX < mx + (10 * (window.innerWidth / 500)) && mouseY > my - (10 * (window.innerWidth / 500)) && mouseY < my + (10 * (window.innerWidth / 500))) {
+      if (mouseX > mx - (10 * u2) && mouseX < mx + (10 * u2) && mouseY > my - (10 * u2) && mouseY < my + (10 * u2)) {
         let ap = plist[id].pos.x - olist[o].pos.x;
         let bp = plist[id].pos.y - olist[o].pos.y;
         let c = Math.sqrt(ap * ap + bp * bp);
@@ -106,7 +112,7 @@ function draw() {
             fill('rgba(255, 0, 0, 0.25)');
           }
           noStroke();
-          rect(0, 0, 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500));
+          rect(0, 0, 20 * u2, 20 * u2);
         }
       }
       pop();
@@ -118,7 +124,6 @@ function draw() {
   text('y: ' + Math.round(plist[id].pos.y / 40), 10, 60);
   text('Latency: ' + latency + 'ms', 10, 90);
   text('TPS: ' + tps, 10, 120);
-  rect(round40(mouseX), round40(mouseY), 20 * (window.innerWidth / 500), 20 * (window.innerWidth / 500))
 }
 
 var pspeed = 2.5;
@@ -179,9 +184,7 @@ socket.on('t', (pnow, onow) => {
   lastt = performance.now();
   plast = plist;
   plist = JSON.parse(LZUTF8.decompress(new Uint8Array(pnow)));
-  if (onow) {
-    olist = JSON.parse(LZUTF8.decompress(new Uint8Array(onow)));
-  }
+  olist = JSON.parse(LZUTF8.decompress(new Uint8Array(onow)));
 });
 
 socket.on('id', (sid) => {
@@ -203,5 +206,4 @@ setInterval(function() {
 
 socket.on('pong', function() {
   latency = Date.now() - startTime;
-  console.log(latency);
 });

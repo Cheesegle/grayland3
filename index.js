@@ -13,8 +13,8 @@ var Dungeon = require('random-dungeon-generator');
 var zeros = require("zeros");
 var cave = require('cave-automata-2d')
   , ndarray = require('ndarray')
-  , width = 1500
-  , height = 1500
+  , width = 6000
+  , height = 6000
 
 class MyRBush extends RBush {
   toBBox([x, y]) { return { minX: x, minY: y, maxX: x, maxY: y }; }
@@ -49,6 +49,9 @@ console.log('Starting...')
 var players = [];
 var objects = require('./worlds/world2').start(SAT, MyRBush, grid);
 // var objects = require('./worlds/world2').start(SAT, d3);
+
+const used = process.memoryUsage().heapUsed / 1024 / 1024;
+console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
 
 var prevss = [];
 
@@ -164,53 +167,25 @@ setInterval(function() {
         }
       })
 
-
-      // let oss = [];
-      // if (!players[a].objloaded) {
-      //   for (let o = 0; o < objects.length; o++) {
-      //     let ap = players[a].pos.x - objects[o].c.pos.x;
-      //     let bp = players[a].pos.y - objects[o].c.pos.y;
-      //     let c = Math.sqrt(ap * ap + bp * bp);
-      //     if (c < 900) {
-      //       oss[o] = { pos: objects[o].pos, tt: objects[o].tt };
-      //     }
-      //   }
-      // }
-
-      // let l = objects.search({
-      //   minX: (players[a].pos.x / 40) - 13,
-      //   minY: (players[a].pos.y / 40) - 8,
-      //   maxX: (players[a].pos.x / 40) + 13,
-      //   maxY: (players[a].pos.y / 40) + 8
-      // });
-
       var l = knn(objects, players[a].pos.x / 40, players[a].pos.y / 40, 400);
 
       if (l) {
-        l.filter(o => {
-          let ap = (players[a].pos.x / 40) - o[0];
-          let bp = (players[a].pos.y / 40) - o[1];
-          let c = Math.sqrt(ap * ap + bp * bp);
-          if (c < 14) {
-            oss.push({ pos: o[2].c.pos, tt: o[2].tt });
-          }
-        })
-      }
-
-
-      if (l) {
-        l.forEach(e => {
+        l.filter(e => {
+          let oc = new SAT.Box(new V(e[0] * 40, e[1] * 40), 40, 40).toPolygon();
           let ap = (players[a].pos.x / 40) - e[0];
           let bp = (players[a].pos.y / 40) - e[1];
           let c = Math.sqrt(ap * ap + bp * bp);
           if (c < 2) {
             let response = new SAT.Response();
-            let collided = SAT.testCirclePolygon(players[a], e[2].c, response);
+            let collided = SAT.testCirclePolygon(players[a], oc, response);
             if (collided) {
               let overlapV = response.overlapV.clone().scale(-1);
               players[a].pos.x += overlapV.x;
               players[a].pos.y += overlapV.y;
             }
+          }
+          if (c < 14) {
+            oss.push({ pos: oc.pos, tt: e[2] });
           }
         })
       }
@@ -248,8 +223,8 @@ io.on('connection', (socket) => {
 
   //spawn
   var id = players.length;
-  players.push(new SAT.Circle(new V((650 * 40) + (Math.random() * (200 * 40)), (650 * 40) + (Math.random() * (200 * 40))), 20));
-  // players.push(new SAT.Circle(new V(1000 * 40, 1000 * 40), 20));
+  // players.push(new SAT.Circle(new V((900 * 40) + (Math.random() * (200 * 40)), (900 * 40) + (Math.random() * (200 * 40))), 20));
+  players.push(new SAT.Circle(new V(6000 * 40, 6000 * 40), 20));
 
   socket.emit('id', id);
 
