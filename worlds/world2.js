@@ -14,15 +14,15 @@ module.exports.start = function(SAT, MyRBush, a) {
       let l = objects.length;
       if (x === 0 || y === 0 || x === (size.x - 1) || y === (size.y - 1)) {
         o.push([x, y, 2]);
-      } else {
-        if (a.get(x, y) === 1) {
-          o.push([x, y, 1]);
-        }
+      } else if (a.get(x, y) === 1) {
+        o.push([x, y, 1]);
       }
     }
   }
 
   objects.load(o);
+
+  o = null;
 
   return objects
 }; 

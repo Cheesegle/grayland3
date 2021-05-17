@@ -14,7 +14,7 @@ var zeros = require("zeros");
 var cave = require('cave-automata-2d')
   , ndarray = require('ndarray')
   , width = 6000
-  , height = 6000
+  , height = 6000;
 
 class MyRBush extends RBush {
   toBBox([x, y]) { return { minX: x, minY: y, maxX: x, maxY: y }; }
@@ -22,7 +22,11 @@ class MyRBush extends RBush {
   compareMinY(a, b) { return a.y - b.y; }
 }
 
-var grid = ndarray = zeros([width, height])
+function roundx(x, m) {
+  return Math.floor(x / m) * m;
+}
+
+var grid = zeros([width, height])
 
 var iterate = cave(grid, {
   density: 0.5
@@ -95,7 +99,7 @@ setInterval(function() {
       // prevss[a].y = players[a].pos.y;
 
       if (!players[a].pspeed) {
-        players[a].pspeed = 8;
+        players[a].pspeed = 3;
       }
 
       if (!players[a].dash) {
@@ -114,11 +118,11 @@ setInterval(function() {
 
       if (players[a].dash.duration >= 0) {
         players[a].dash.duration--;
-        players[a].pspeed = 19;
+        players[a].pspeed = 9;
       }
 
       if (players[a].dash.duration <= 0) {
-        players[a].pspeed = 8;
+        players[a].pspeed = 3;
       }
 
       players[a].dash.cooldown--;
@@ -167,15 +171,15 @@ setInterval(function() {
         }
       })
 
-      var l = knn(objects, players[a].pos.x / 40, players[a].pos.y / 40, 400);
+      var l = knn(objects, players[a].pos.x / 40, players[a].pos.y / 40, 616);
 
       if (l) {
         l.filter(e => {
-          let oc = new SAT.Box(new V(e[0] * 40, e[1] * 40), 40, 40).toPolygon();
           let ap = (players[a].pos.x / 40) - e[0];
           let bp = (players[a].pos.y / 40) - e[1];
           let c = Math.sqrt(ap * ap + bp * bp);
-          if (c < 2) {
+          if (c < 2 && e[2] !== 0) {
+            let oc = new SAT.Box(new V(e[0] * 40, e[1] * 40), 40, 40).toPolygon();
             let response = new SAT.Response();
             let collided = SAT.testCirclePolygon(players[a], oc, response);
             if (collided) {
@@ -185,7 +189,7 @@ setInterval(function() {
             }
           }
           if (c < 14) {
-            oss.push({ pos: oc.pos, tt: e[2] });
+            oss.push({ pos: { x: e[0], y: e[1] }, tt: e[2] });
           }
         })
       }
@@ -212,7 +216,7 @@ setInterval(function() {
 
     }
   }
-}, 1000 / 20);
+}, 1000 / 32);
 
 io.on('connection', (socket) => {
   console.log('a user connected');
@@ -221,10 +225,10 @@ io.on('connection', (socket) => {
     socket.emit('pong');
   });
 
-  //spawn
+  //spawn 
   var id = players.length;
-  // players.push(new SAT.Circle(new V((900 * 40) + (Math.random() * (200 * 40)), (900 * 40) + (Math.random() * (200 * 40))), 20));
-  players.push(new SAT.Circle(new V(6000 * 40, 6000 * 40), 20));
+  players.push(new SAT.Circle(new V((2900 * 40) + (Math.random() * (200 * 40)), (2900 * 40) + (Math.random() * (200 * 40))), 20));
+  // players.push(new SAT.Circle(new V(480 * 40, 480 * 40), 20));
 
   socket.emit('id', id);
 
@@ -274,13 +278,13 @@ io.on('connection', (socket) => {
 
   socket.on('break', (x, y) => {
     if (breakd === 60) {
-      let ap = players[id].pos.x - x * 40;
-      let bp = players[id].pos.y - y * 40;
-      let c = Math.sqrt(ap * ap + bp * bp);
-      if (c < 150) {
-        let l = knn(objects, x, y, 1);
-        if (l) {
-          objects.remove(l[0])
+      let l = knn(objects, x, y, 1);
+      if (l[2] !== 0 && l[2] !== 2) {
+        let ap = players[id].pos.x - (l[0][0] * 40);
+        let bp = players[id].pos.y - (l[0][1] * 40);
+        let c = Math.sqrt(ap * ap + bp * bp);
+        if (c < 150) {
+          objects.remove(l[0]);
         }
       }
     }
@@ -291,4 +295,45 @@ io.on('connection', (socket) => {
     socket.emit('b', 0);
     breakd = 61;
   });
+
+
+  let placed;
+
+  setInterval(function() {
+    if (placed < 60) {
+      placed++;
+      socket.emit('p', placed / 60);
+    }
+  }, 1000 / 60);
+
+  socket.on('place', (x, y) => {
+    let xx = Math.floor(x);
+    let yy = Math.floor(y);
+    if (placed === 60) {
+      let ap = players[id].pos.x - (xx * 40);
+      let bp = players[id].pos.y - (yy * 40);
+      let c = Math.sqrt(ap * ap + bp * bp);
+      console.log(c)
+      if (c < 150) {
+        let l = objects.search({
+          minX: xx,
+          minY: yy,
+          maxX: xx,
+          maxY: yy
+        });
+
+        if (!l[0]) {
+          console.log('owo')
+          objects.insert([xx, yy, 3]);
+        }
+      }
+    }
+    placed = 0;
+  });
+
+  socket.on('placec', () => {
+    socket.emit('p', 0);
+    placed = 61;
+  });
+
 });

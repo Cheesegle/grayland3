@@ -7,21 +7,28 @@ var plast = [];
 var breakp = 0;
 var latency;
 var lastt;
+
+//tiles
 var temptile;
 var border;
+var cobble;
+
 var tcount = 0;
 var tps;
 var u = (window.innerWidth / 1000);
 var u2 = (window.innerWidth / 500);
+var mode = 'break';
+var placep = 0;
 
-function round40(x) {
-  return Math.floor(x / 40) * 40;
+
+function roundx(x, m) {
+  return Math.floor(x / m) * m;
 }
 
 var name = prompt("Username:", "");
 
 if (name != null) {
-  socket.emit('name', name)
+  socket.emit('name', name);
 }
 
 document.addEventListener('contextmenu', event => event.preventDefault());
@@ -29,6 +36,7 @@ document.addEventListener('contextmenu', event => event.preventDefault());
 function preload() {
   temptile = loadImage('assets/temptile.png');
   border = loadImage('assets/border.jpg');
+  cobble = loadImage('assets/cobble.png');
 }
 
 function setup() {
@@ -46,6 +54,7 @@ function draw() {
   if (plist[id] && plast[id]) {
     translate(-lerp(plast[id].pos.x, plist[id].pos.x, lasttd) * u, -lerp(plast[id].pos.y, plist[id].pos.y, lasttd) * u)
   }
+
   for (let i = 0; i < plist.length; i++) {
     if (plist[i] && plast[i]) {
       push();
@@ -63,56 +72,80 @@ function draw() {
   // circle(0, 0, 20 * u2);
   // pop();
 
-
-  // push();
-  // translate(-windowWidth / 2, -windowHeight / 2);
-  // translate(plist[id].pos.x * u, plist[id].pos.y * u);
-  // rect(round40(mouseX) * u2, mouseY, 20 * u2, 20 * u2);
-  // pop();
+  push();
+  if (mode === 'place') {
+    if (mouseIsPressed) {
+      if (mouseButton === LEFT) {
+        if (placep === 0) {
+          // socket.emit('place', olist[o].pos.x / 40, olist[o].pos.y / 40);
+        }
+        if (placep === 1) {
+          // socket.emit('place', olist[o].pos.x / 40, olist[o].pos.y / 40);
+        }
+        fill('rgba(0, 255, 0, ' + ((breakp / 2) + 0.25) + ')');
+      }
+    } else {
+      if (breakp !== 0) {
+        socket.emit('placec');
+      }
+      fill('rgba(0, 255, 0, 0.25)');
+    }
+    noStroke();
+    resetMatrix();
+    rect(mouseX, mouseY, 20 * u2, 20 * u2);
+  }
+  pop();
 
   for (let o = 0; o < olist.length; o++) {
     if (olist[o]) {
       push();
-      translate(olist[o].pos.x * u, olist[o].pos.y * u);
+      translate((olist[o].pos.x * 40) * u, (olist[o].pos.y * 40) * u);
       if (olist[o].tt === 1) {
         image(temptile, -10 * u2, -10 * u2, 20 * u2, 20 * u2);
       }
       if (olist[o].tt === 2) {
         image(border, -10 * u2, -10 * u2, 20 * u2, 20 * u2);
       }
+      if (olist[o].tt === 3) {
+        image(cobble, -10 * u2, -10 * u2, 20 * u2, 20 * u2);
+      }
 
-      let mx = ((olist[o].pos.x * u) - ((plist[id].pos.x * u)) + (windowWidth / 2));
+      let mx = (((olist[o].pos.x * 40) * u) - ((plist[id].pos.x * u)) + (windowWidth / 2));
 
-      let my = ((olist[o].pos.y * u) - ((plist[id].pos.y * u)) + (windowHeight / 2));
+      let my = (((olist[o].pos.y * 40) * u) - ((plist[id].pos.y * u)) + (windowHeight / 2));
 
-      if (mouseX > mx - (10 * u2) && mouseX < mx + (10 * u2) && mouseY > my - (10 * u2) && mouseY < my + (10 * u2)) {
-        let ap = plist[id].pos.x - olist[o].pos.x;
-        let bp = plist[id].pos.y - olist[o].pos.y;
-        let c = Math.sqrt(ap * ap + bp * bp);
-        if (c < 150) {
-          if (mouseIsPressed) {
-            if (mouseButton === LEFT) {
-              if (breakp === 0) {
-                socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
+      if (mode === 'break') {
+        if (mouseX > mx - (10 * u2) && mouseX < mx + (10 * u2) && mouseY > my - (10 * u2) && mouseY < my + (10 * u2)) {
+          let ap = plist[id].pos.x - (olist[o].pos.x * 40);
+          let bp = plist[id].pos.y - (olist[o].pos.y * 40);
+          let c = Math.sqrt(ap * ap + bp * bp);
+          if (c < 150) {
+            if (olist[o].tt !== 0 && olist[o].tt !== 2) {
+              if (mouseIsPressed) {
+                if (mouseButton === LEFT) {
+                  if (breakp === 0) {
+                    socket.emit('break', olist[o].pos.x, olist[o].pos.y);
+                  }
+                  if (breakp === 1) {
+                    socket.emit('break', olist[o].pos.x, olist[o].pos.y);
+                  }
+                  fill('rgba(255, 0, 0, ' + ((breakp / 2) + 0.25) + ')');
+                } else {
+                  if (breakp !== 0) {
+                    socket.emit('breakc');
+                  }
+                  fill('rgba(255, 0, 0, 0.25)');
+                }
+              } else {
+                if (breakp !== 0) {
+                  socket.emit('breakc');
+                }
+                fill('rgba(255, 0, 0, 0.25)');
               }
-              if (breakp === 1) {
-                socket.emit('break', olist[o].pos.x / 40, olist[o].pos.y / 40);
-              }
-              fill('rgba(255, 0, 0, ' + ((breakp / 2) + 0.25) + ')');
-            } else {
-              if (breakp !== 0) {
-                socket.emit('breakc');
-              }
-              fill('rgba(255, 0, 0, 0.25)');
+              noStroke();
+              rect(0, 0, 20 * u2, 20 * u2);
             }
-          } else {
-            if (breakp !== 0) {
-              socket.emit('breakc');
-            }
-            fill('rgba(255, 0, 0, 0.25)');
           }
-          noStroke();
-          rect(0, 0, 20 * u2, 20 * u2);
         }
       }
       pop();
@@ -124,6 +157,7 @@ function draw() {
   text('y: ' + Math.round(plist[id].pos.y / 40), 10, 60);
   text('Latency: ' + latency + 'ms', 10, 90);
   text('TPS: ' + tps, 10, 120);
+  text('Hand: ' + mode, 10, 150);
 }
 
 var pspeed = 2.5;
@@ -151,6 +185,12 @@ function keyPressed() {
   if (keyCode === 32) {
     socket.emit('space', true)
   }
+
+  if (keyCode === 49) {
+    mode = 'break';
+  } else if (keyCode === 50) {
+    mode = 'place';
+  }
 }
 
 function keyReleased() {
@@ -177,6 +217,8 @@ function keyReleased() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  u = (window.innerWidth / 1000);
+  u2 = (window.innerWidth / 500);
 }
 
 socket.on('t', (pnow, onow) => {
@@ -184,7 +226,10 @@ socket.on('t', (pnow, onow) => {
   lastt = performance.now();
   plast = plist;
   plist = JSON.parse(LZUTF8.decompress(new Uint8Array(pnow)));
-  olist = JSON.parse(LZUTF8.decompress(new Uint8Array(onow)));
+  let ou = JSON.parse(LZUTF8.decompress(new Uint8Array(onow)));
+  if (ou.length !== 0) {
+    olist = ou;
+  }
 });
 
 socket.on('id', (sid) => {
@@ -193,6 +238,10 @@ socket.on('id', (sid) => {
 
 socket.on('b', (b) => {
   breakp = b;
+});
+
+socket.on('p', (p) => {
+  placep = p;
 });
 
 var startTime;
